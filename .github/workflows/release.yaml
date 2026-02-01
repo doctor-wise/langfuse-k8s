@@ -6,6 +6,7 @@ on:
       - main
     paths:
       - 'charts/*/Chart.yaml'
+  workflow_dispatch:  # Allow manual triggering
 jobs:
   release:
     name: Release Helm Chart
