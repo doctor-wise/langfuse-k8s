@@ -1,8 +1,6 @@
 name: Update Langfuse Version
 on:
-  schedule:
-    - cron: '0 9 * * 1'  # Run every Monday at 9 AM UTC
-  workflow_dispatch:  # Allow manual triggering
+  workflow_dispatch:  # Manual triggering only
 
 jobs:
   check-and-update:
@@ -42,16 +40,6 @@ jobs:
             echo "Already up to date"
           fi
 
-      - name: Setup Node.js
-        if: steps.version-check.outputs.needs_update == 'true'
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
-      - name: Install semver
-        if: steps.version-check.outputs.needs_update == 'true'
-        run: npm install -g semver
-
       - name: Update Chart.yaml
         if: steps.version-check.outputs.needs_update == 'true'
         id: update-chart
@@ -60,13 +48,13 @@ jobs:
           CURRENT_CHART_VERSION=$(grep '^version:' charts/langfuse/Chart.yaml | cut -d ' ' -f 2)
           echo "Current chart version: $CURRENT_CHART_VERSION"
           
-          # Increment patch version
-          NEW_CHART_VERSION=$(semver -i patch $CURRENT_CHART_VERSION)
+          # Use Langfuse version for both chart version and appVersion
+          NEW_CHART_VERSION="${{ steps.latest-version.outputs.latest }}"
           echo "New chart version: $NEW_CHART_VERSION"
           
-          # Update Chart.yaml
+          # Update Chart.yaml - both version and appVersion match Langfuse version
           sed -i "s/^version: .*/version: $NEW_CHART_VERSION/" charts/langfuse/Chart.yaml
-          sed -i "s/^appVersion: .*/appVersion: \"${{ steps.latest-version.outputs.latest }}\"/" charts/langfuse/Chart.yaml
+          sed -i "s/^appVersion: .*/appVersion: \"$NEW_CHART_VERSION\"/" charts/langfuse/Chart.yaml
           
           echo "chart_version=$NEW_CHART_VERSION" >> $GITHUB_OUTPUT
 
@@ -92,7 +80,7 @@ jobs:
             chore: bump langfuse to ${{ steps.latest-version.outputs.latest }}
             
             - Update appVersion to ${{ steps.latest-version.outputs.latest }}
-            - Bump chart version to ${{ steps.update-chart.outputs.chart_version }}
+            - Update chart version to ${{ steps.update-chart.outputs.chart_version }} (matching Langfuse version)
             - Update generated documentation
           title: "chore: bump langfuse to ${{ steps.latest-version.outputs.latest }}"
           body: |
@@ -101,11 +89,11 @@ jobs:
             
             ## Changes
             - ⬆️ Update appVersion from ${{ steps.current-version.outputs.current }} to ${{ steps.latest-version.outputs.latest }}
-            - 📦 Bump chart version to ${{ steps.update-chart.outputs.chart_version }}
+            - 📦 Update chart version to ${{ steps.update-chart.outputs.chart_version }} (matching Langfuse version)
             - 📝 Update generated documentation
             
             ## Automated Changes
-            This PR was automatically created by the weekly version check workflow.
+            This PR was automatically created by the manual version update workflow.
             
             ---
             **Release Notes**: https://github.com/langfuse/langfuse/releases/tag/v${{ steps.latest-version.outputs.latest }}
